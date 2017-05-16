@@ -1,0 +1,232 @@
+require "sched"
+require "debug"
+require "wxserpent"
+require "utils"
+require "midi-io"
+
+notes = [60, 62, 64, 65, 67, 69, 71, 72, 74, 76]
+bassNotes = [[36, 33, 41], [38, 35, 31], [40, 36, 33], [41, 38, 35], [31, 40, 36], 
+             [33, 41, 38], [35, 31, 40]]
+noteNames = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
+colors = [[235, 50, 0], [235, 100, 10], [245, 235, 20], [80, 220, 0], [0, 235, 230], 
+          [20, 50, 255], [220, 50, 240]]
+key = "C"
+melody = []
+tempo = 100
+melodyVolume = 70
+tenorVolume = 90
+bassVolume = 100
+playing = false
+prevNote = -1
+prevTenorNote = -1
+prevBassNote = -1
+inversions = false
+
+o2_initialize("a", false)
+o2_clock_set()
+o2_service_new("sequence_player")
+o2_osc_port_new("sequence_player", 8000, false)
+
+o2_method_new("/sequence_player/1/fader1", "f", 'fader1_handler', true)
+def fader1_handler(time, address, types, float_param)
+    display "fader1_handler", time, address, types, float_param
+    print 666
+    vtsched.start_use()
+    print 777
+    if float_param != 1: melodyVolume = int(100 * float_param)
+    display melodyVolume
+    vtsched.finish_use()
+
+o2_method_new("/sequence_player/1/toggle1", "i", 'toggle1_handler', true)
+def toggle1_handler(time, address, types, float_param)
+    display "toggle1_handler", time, address, types, float_param
+    print 111
+    vtsched.start_use()
+    print 222
+    inversions = true if int_param == 1 else false
+    display inversions
+    vtsched.finish_use()
+
+random_seed(time_date()[0])
+
+sched_init()
+midi_out = midi_create()
+midi_dev = midi_out_default()
+if midi_open_output(midi_out, midi_dev, 100, 10) != 0
+    print "Error opening default MIDI device for output"
+
+class MyCanvas(Canvas)
+    def paint(x)
+        draw_text(230, 10, "Melody")
+        draw_text(130, 10, "Tenor")
+        draw_text(30, 10, "Bass")
+        if playing
+            curColor = colors[notes.index(prevNote) % 7]
+            set_pen_rgb(curColor[0], curColor[1], curColor[2])
+            set_brush_rgb(curColor[0], curColor[1], curColor[2])
+            draw_ellipse(225, 300 - 29 * notes.index(prevNote), 50, 50)
+            curColor = colors[notes.index(prevTenorNote + 12) % 7]
+            set_pen_rgb(curColor[0], curColor[1], curColor[2])
+            set_brush_rgb(curColor[0], curColor[1], curColor[2])
+            draw_ellipse(127, 300 - 29 * notes.index(prevTenorNote + 12), 50, 50)
+            temp = prevBassNote
+            if bassNote < 36: temp = temp + 12
+            curColor = colors[notes.index(temp + 24) % 7]
+            set_pen_rgb(curColor[0], curColor[1], curColor[2])
+            set_brush_rgb(curColor[0], curColor[1], curColor[2])
+            draw_ellipse(26, 300 - 29 * notes.index(temp + 24), 50, 50)
+            return
+        else
+            return
+default_window.set_size(460, 450)
+myCanvas = MyCanvas(default_window, 150, 12, 300, 400)
+
+myCanvas.refresh(t)
+
+newMelodyButton = Button(WXS_DEFAULT_WINDOW, "New Melody", 10, 9, 130, 25)
+newMelodyButton.method = 'generate_melody'
+playMelodyButton = Button(WXS_DEFAULT_WINDOW, "Play Melody", 10, 42, 130, 25)
+playMelodyButton.method = 'start_schedule_notes'
+sequenceMelodyButton = Button(WXS_DEFAULT_WINDOW, "Sequence Melody", 10, 75, 130, 25)
+sequenceMelodyButton.method = 'get_sequence'
+
+melodyVolumeSlider = Slider(WXS_DEFAULT_WINDOW, 0, 127, 70, 350, 415, 100, 20)
+melodyGauge = Gauge(WXS_DEFAULT_WINDOW, 127, 350, 431, 95, 10)
+melodyVolumeSlider.method = 'change_melody_volume'
+TenorVolumeSlider = Slider(WXS_DEFAULT_WINDOW, 0, 127, 90, 250, 415, 100, 20)
+tenorGauge = Gauge(WXS_DEFAULT_WINDOW, 127, 250, 431, 95, 10)
+TenorVolumeSlider.method = 'change_tenor_volume'
+bassVolumeSlider = Slider(WXS_DEFAULT_WINDOW, 0, 127, 100, 150, 415, 100, 20)
+bassGauge = Gauge(WXS_DEFAULT_WINDOW, 127, 150, 431, 95, 10)
+bassVolumeSlider.method = 'change_bass_volume'
+
+load "vumeter"
+my_vu = Vumeter(default_window.id, 2, 42, 270)
+
+keyChoice = Choice(WXS_DEFAULT_WINDOW, 20, 140, 100, 25)
+keyChoice.method = 'change_key'
+for i = 0 to 12
+    keyChoice.append(noteNames[i])
+
+tempoSpinttrl = Spinctrl(WXS_DEFAULT_WINDOW, 0, 300, 100, 51, 380, 50, 24)
+tempoSpinttrl.method = 'tempo_change'
+
+def tempo_change(obj, event, x, y):
+    tempo = x
+
+def change_key(obj, event, x, y):
+    key = x
+
+def change_melody_volume(obj, event, x, y):
+    melodyGauge.set_value(x)
+    melodyVolume = x
+
+def change_tenor_volume(obj, event, x, y):
+    tenorGauge.set_value(x)
+    tenorVolume = x
+
+def change_bass_volume(obj, event, x, y):
+    bassGauge.set_value(x)
+    bassVolume = x
+
+def wxs_exit()
+    true
+
+def get_random_number()
+    return int(random() * 100 / 10)
+
+def generate_melody(obj, event, x, y)
+    get_random_number()
+    newNote = notes[get_random_number()]
+    melody = [newNote]
+    temp = newNote
+    while len(melody) < 7
+        newNote = notes[get_random_number()]
+        while (abs(temp - newNote) > 5)
+            newNote = notes[get_random_number()]
+        melody.append(newNote)
+        temp = newNote
+
+def get_sequence(obj, event, x, y)
+    if melody == []: return
+    interval = get_random_number()
+    for i = 0 to 7
+        temp = notes.index(melody[i]) + interval
+        if temp > 9: temp = temp - 7
+        if temp > 9: temp = temp - 7
+        melody[i] = notes[temp]
+
+def play(m, note, tenorNote, bassNote)
+    if prevNote != -1
+        midi_write(m, 0, chr(0x90) + chr(prevNote) + chr(0))
+        midi_write(m, 0, chr(0x90) + chr(prevTenorNote) + chr(0))
+        midi_write(m, 0, chr(0x90) + chr(prevBassNote) + chr(0))
+    midi_write(m, 0, chr(0x90) + chr(note) + chr(melodyVolume))
+    midi_write(m, 0, chr(0x90) + chr(tenorNote) + chr(tenorVolume))
+    midi_write(m, 0, chr(0x90) + chr(bassNote) + chr(bassVolume))
+
+def update_vumeter(n)
+    my_vu.update(0, (melodyVolume + tenorVolume + bassVolume) / 3 / 118 / 2 - 
+                    (melodyVolume + tenorVolume + bassVolume) / 3 / 118 / 2 / 4 * n)
+    my_vu.update(1, (melodyVolume + tenorVolume + bassVolume) / 3 / 118 / 2 - 
+                    (melodyVolume + tenorVolume + bassVolume) / 3 / 118 / 2 / 4 * n)
+    my_vu.tick()
+
+def check_key(note)
+    res = note
+    if key != "C"
+        res = note + noteNames.index(key)
+        if noteNames.index(key) > 6
+            res = res - 12
+    return res
+
+def schedule_notes(i, m)
+    if i == 7
+        vtsched.cause(0, nil, 'update_vumeter', 10)
+        playing = false
+        myCanvas.refresh(t)
+        prevNote = -1
+        prevTenorNote = -1
+        prevBassNote = -1
+        sched_running = false
+        return
+    bassNote = bassNotes[notes.index(melody[i]) % 7][int(random() * 100) % 3]
+    while (prevBassNote == 31 or prevBassNote == 35 or prevBassNote == 43) and 
+          (bassNote == 38 or bassNote == 41)
+        bassNote = bassNotes[notes.index(melody[i]) % 7][int(random() * 100) % 3]
+    temp = bassNote + 24
+    if bassNote < 36: temp = temp + 12
+    tenorNote = notes[(notes.index(temp) + 2) % 7] - 12
+    if prevTenorNote != -1 and abs(tenorNote - prevTenorNote) > 4
+        if abs(notes[notes.index(temp) % 7] - 12 - prevTenorNote) <
+           abs(notes[(notes.index(temp) + 4) % 7] - 12 - prevTenorNote)
+            tenorNote = notes[notes.index(temp) % 7] - 12
+        else
+            tenorNote = notes[(notes.index(temp) + 4) % 7] - 12
+    if prevBassNote == 41 and bassNote == 31
+        bassNote = bassNote + 12
+    print noteNames[bassNote % 12], noteNames[tenorNote % 12]
+    play(m, check_key(melody[i] + 12), check_key(tenorNote), check_key(bassNote))
+    prevNote = melody[i]
+    prevTenorNote = tenorNote
+    prevBassNote = bassNote
+    myCanvas.refresh(t)
+    o2_poll()
+    vtsched.cause(0, nil, 'update_vumeter', 0)
+    vtsched.cause(60 / tempo / 4, nil, 'update_vumeter', 1)
+    vtsched.cause(60 / tempo / 2, nil, 'update_vumeter', 2)
+    vtsched.cause(60 / tempo / 4 * 3, nil, 'update_vumeter', 3)
+    vtsched.cause(60 / tempo, nil, 'schedule_notes', i + 1, m)
+
+def start_schedule_notes(obj, event, x, y)
+    if melody == []: return
+    playing = true
+    tempLst = []
+    for j = 0 to 7
+        tempLst.append(noteNames[melody[j] % 12])
+    print tempLst
+    rtsched.time_offset = time_get()
+    vtsched.start_use()
+    vtsched.cause(0, nil, 'schedule_notes', 0, midi_out)
+    vtsched.finish_use()
+    sched_launch()    
