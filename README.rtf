@@ -1,24 +1,39 @@
 {\rtf1\ansi\ansicpg1252\cocoartf1504\cocoasubrtf810
-{\fonttbl\f0\fnil\fcharset0 HelveticaNeue;}
-{\colortbl;\red255\green255\blue255;\red0\green0\blue0;\red255\green255\blue255;\red255\green255\blue255;
-}
-{\*\expandedcolortbl;;\csgenericrgb\c0\c0\c0;\csgenericrgb\c100000\c100000\c100000;\cssrgb\c100000\c100000\c100000;
-}
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;\red26\green26\blue26;}
+{\*\expandedcolortbl;;\cssrgb\c13333\c13333\c13333;}
 \paperw11900\paperh16840\margl1440\margr1440\vieww10800\viewh8400\viewkind0
-\deftab720
-\pard\pardeftab720\sl300\partightenfactor0
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
 
-\f0\fs24 \cf2 \cb3 \expnd0\expndtw0\kerning0
-\outl0\strokewidth0 \strokec4 Add to p2\
+\f0\fs24 \cf0 Sequence Player\
 \
-animate circles by adding transitions or glow\
+This is a program that generates a diatonic melody using a random number generator, along with tenor and bass lines, and is able to sequence it in the current key. The tenor and bass lines will not always be the same when the same melody is repeated or sequenced. The program also generates animation along with the music. On every beat, there are three circles that represent each note (from the melody, tenor, and bass lines) that change position and color depending on the pitch. This program can be controlled using the wxserpent interface or touchOSC simple layout with port 8000.\
 \
-add dif colors for dif keys\
 \
-gradient for voice parts\
 \
-chord Roman numerals\
+Parameters/Features(description in parenthesis describes OSC control):\
 \
-black and white\
+-The \'93New Melody\'94 button creates a new melody in the current key. (first toggle)\
 \
-vumeter doesn't go back to 0}
+-The \'93Play Melody\'94 button (re)plays the melody. (second toggle)\
+\
+-The \'93Sequence Melody\'94 button sequences the melody in the current key. (third toggle)\
+\
+-The \'93toggleBlackAndWhite\'94 button toggles true or false for black and white colors for the circles. (fourth toggle)\
+\
+-Different key choices, use dropdown menu. (first vertical slider)\
+\
+-Tempo control, enter number [0, 300] or press arrow buttons. (top slider)\
+\
+-Individual volume controls for each voice, use sliders. (vertical sliders, in the order of bass, tenor, melody)\
+\
+-A VU meter that shows overall volume\
+\
+\pard\pardeftab720\sl220\partightenfactor0
+\cf2 \expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 -The intervals between each note in the melody are at most a perfect 4th\
+\
+-The tenor line plays the 3rd of the chord as much as possible while maintaining a smooth line (the intervals between each tenor note should be at most a minor 3rd)\
+\
+-The bass note is always the root of the chord, and uses a random number generator for each beat. There is no retrogression.\
+}
